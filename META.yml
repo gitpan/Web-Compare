@@ -4,6 +4,7 @@ author:
   - 'Dai Okabayashi <bayashi@cpan.org>'
 build_requires:
   LWP::UserAgent: 0
+  String::Diff: 0
   Test::Fake::HTTPD: 0
   Test::More: 0.88
 configure_requires:
@@ -18,7 +19,7 @@ name: Web-Compare
 provides:
   Web::Compare:
     file: lib/Web/Compare.pm
-    version: 0.01
+    version: 0.02
 requires:
   Carp: 0
   Class::Accessor::Lite: 0
@@ -32,4 +33,4 @@ resources:
   bugtracker: http://github.com/bayashi/Web-Compare/issues
   license: http://dev.perl.org/licenses/
   repository: http://github.com/bayashi/Web-Compare
-version: 0.01
+version: 0.02
