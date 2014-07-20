@@ -1,7 +1,6 @@
 package Web::Compare;
 use strict;
 use warnings;
-use Carp qw/croak/;
 use HTTP::Request;
 use Furl;
 use Diff::LibXDiff;
@@ -13,10 +12,11 @@ use Class::Accessor::Lite (
         diff
         hook_before
         hook_after
+        on_error
     /],
 );
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 sub new {
     my ($class, $left, $right, $options) = @_;
@@ -27,6 +27,7 @@ sub new {
         diff => $options->{diff},
         hook_before => $options->{hook_before},
         hook_after  => $options->{hook_after},
+        on_error    => $options->{on_error},
     }, $class;
 }
 
@@ -59,6 +60,12 @@ sub _request {
             $self->hook_before->($self, $req);
         }
         my $res = $self->ua->request($req);
+        unless ($res->is_success) {
+            if ($self->on_error) {
+                $self->on_error->($self, $res, $req);
+            }
+            die 'Error: '.$req->uri. "\n". $res->status_line. "\n";
+        }
         my $content = $self->hook_after
                     ? $self->hook_after->($self, $res, $req) : $res->content;
         push @responses, $content;
@@ -103,17 +110,24 @@ Web::Compare - Compare web pages
 
 Web::Compare is the tool for comparing web pages.
 
-It might be useful like below.
+It might be useful for comparing staging web page to production web page like below.
 
     use Web::Compare;
     
     my $wc = Web::Compare->new(
         'http://staging.example.com/foo/bar',
         'http://production.example.com/foo/bar',
+        {
+            hook_before => sub {
+                my ($self, $req) = @_;
+
+                if ($req->uri =~ /staging\./) {
+                    $req->authorization_basic('id', 'password');
+                }
+            },
+        }
     );
     warn $wc->report;
-
-To compare staging web page to production web page.
 
 
 =head1 METHODS
@@ -131,24 +145,6 @@ C<$options_ref> follows bellow params.
 =item B<ua>
 
 The user agent object what you want.
-
-=item B<diff>
-
-By default, C<Web::Compare> uses L<Diff::LibXDiff> for reporting diff.
-If you want to use an other diff tool, you'll set C<diff> param as code ref.
-
-    use Web::Compare;
-    use String::Diff qw//;
-    
-    my $wc = Web::Compare->new(
-        $lefturl, $righturl, {
-            diff => sub {
-                my ($left, $right) = @_;
-
-                String::Diff::diff_merge($left, $right);
-            },
-        },
-    );
 
 =item B<hook_before>
 
@@ -168,6 +164,40 @@ There are hooks around the request.
                 my ($self, $res, $req) = @_;
                 (my $content = $res->content) =~ s!Hello!Hi!;
                 return $content;
+            },
+        },
+    );
+
+=item B<on_error>
+
+When a request was failed, C<on_error> callback is invoked if you set this option as code ref.
+
+    use Web::Compare;
+    use Data::Dumper;
+
+    my $wc = Web::Compare->new(
+        $lefturl, $righturl, {
+            on_error => sub {
+                my ($self, $res, $req) = @_;
+                warn Dumper($req, $res);
+            },
+        },
+    );
+
+=item B<diff>
+
+By default, C<Web::Compare> uses L<Diff::LibXDiff> for reporting diff.
+If you want to use an other diff tool, you'll set C<diff> param as code ref.
+
+    use Web::Compare;
+    use String::Diff qw//;
+    
+    my $wc = Web::Compare->new(
+        $lefturl, $righturl, {
+            diff => sub {
+                my ($left, $right) = @_;
+
+                String::Diff::diff_merge($left, $right);
             },
         },
     );

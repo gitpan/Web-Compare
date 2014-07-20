@@ -19,9 +19,8 @@ name: Web-Compare
 provides:
   Web::Compare:
     file: lib/Web/Compare.pm
-    version: 0.03
+    version: 0.04
 requires:
-  Carp: 0
   Class::Accessor::Lite: 0
   Diff::LibXDiff: 0
   Furl: 0
@@ -33,4 +32,4 @@ resources:
   bugtracker: http://github.com/bayashi/Web-Compare/issues
   license: http://dev.perl.org/licenses/
   repository: http://github.com/bayashi/Web-Compare
-version: 0.03
+version: 0.04
